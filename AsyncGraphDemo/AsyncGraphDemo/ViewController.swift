@@ -49,12 +49,12 @@ class ViewController: UIViewController {
 		let unrelatedUpdate = NodeIdentifier(Entity.Unrelated.rawValue, Operation.Update.rawValue)
 		let personValuesUpdate = NodeIdentifier(Entity.PersonValues.rawValue, Operation.Update.rawValue)
 		
-		let graph = AsyncGraph(definition: GraphDefinition(nodes: [	NodeDefinition(personUpdate),
-																	NodeDefinition(personCommit),
-																	NodeDefinition(personDataUpdate),
-																	NodeDefinition(personDataCommit),
-																	NodeDefinition(unrelatedUpdate),
-																	NodeDefinition(personValuesUpdate) ],
+		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(personUpdate),
+														NodeDefinition(personCommit),
+														NodeDefinition(personDataUpdate),
+														NodeDefinition(personDataCommit),
+														NodeDefinition(unrelatedUpdate),
+														NodeDefinition(personValuesUpdate) ],
 			dependencies: [	DependencyDefinition(from: personUpdate, to: personCommit),
 							DependencyDefinition(from: personDataCommit, to: personUpdate),
 							DependencyDefinition(from: personValuesUpdate, to: personUpdate),

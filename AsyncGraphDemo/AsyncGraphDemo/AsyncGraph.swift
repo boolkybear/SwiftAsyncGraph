@@ -180,7 +180,7 @@ class AsyncGraph
 	private var privateStatus: AsyncGraphStatus
 	var status: AsyncGraphStatus { get { return self.privateStatus } }
 	
-	init(definition: GraphDefinition?)
+	init(_ definition: GraphDefinition?)
 	{
 		self.concurrentProcessCount = 0
 		self.nonConcurrentProcessCount = 0
@@ -214,7 +214,7 @@ class AsyncGraph
 	
 	convenience init()
 	{
-		self.init(definition: nil)
+		self.init(nil)
 	}
 	
 	func addNodeWithDefinition(definition: NodeDefinition)
