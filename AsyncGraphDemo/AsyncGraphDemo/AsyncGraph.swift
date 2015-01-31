@@ -30,12 +30,8 @@ struct NodeIdentifier: Hashable
 	
 	var hashValue: Int
 	{
-		var tagStr = "tag = (null)"
-		if let tagValue = self.tag
-		{
-			tagStr = "tag = \(tagValue)"
-		}
-		let fullStr = "identifier = \(self.identifier); \(tagStr)"
+		let tagStr = self.tag != nil ? "\(self.tag)" : "(null)"
+		let fullStr = "identifier = \(self.identifier); tag = \(tagStr)"
 		
 		return fullStr.hashValue
 	}
@@ -65,14 +61,8 @@ struct DependencyDefinition
 	
 	init(from: NodeIdentifier, to: NodeIdentifier...)
 	{
-		var parents = [NodeIdentifier]()
-		for parent in to
-		{
-			parents.append(parent)
-		}
-		
 		self.from = from
-		self.to = parents
+		self.to = [NodeIdentifier](to)
 	}
 }
 
@@ -103,10 +93,10 @@ class AsyncGraph
 		private var dependantNodes: [AsyncGraphNode]
 		
 		private var privateStatus: AsyncGraphStatus
-		var status: AsyncGraphStatus { get { return self.privateStatus } }
+		var status: AsyncGraphStatus { return self.privateStatus }
 		
 		private var privateResult: NodeResult?
-		var result: NodeResult? { get { return self.privateResult } }
+		var result: NodeResult? { return self.privateResult }
 		
 		required init(_ definition: NodeDefinition)
 		{
@@ -178,7 +168,7 @@ class AsyncGraph
 	private var mutexQueue: dispatch_queue_t
 	
 	private var privateStatus: AsyncGraphStatus
-	var status: AsyncGraphStatus { get { return self.privateStatus } }
+	var status: AsyncGraphStatus { return self.privateStatus }
 	
 	init(_ definition: GraphDefinition?)
 	{
@@ -193,14 +183,14 @@ class AsyncGraph
 	
 		self.nodeDictionary = [ NodeIdentifier : AsyncGraphNode ]()
 	
-		if let graphDefinition = definition
+		if let definition = definition
 		{
-			for nodeDefinition in graphDefinition.nodes
+			for nodeDefinition in definition.nodes
 			{
 				self.addNodeWithDefinition(nodeDefinition)
 			}
 			
-			for dependencyDefinition in graphDefinition.dependencies
+			for dependencyDefinition in definition.dependencies
 			{
 				let from = dependencyDefinition.from
 				
@@ -237,13 +227,11 @@ class AsyncGraph
 			let fromNode = self.nodeDictionary[from]
 			let toNode = self.nodeDictionary[to]
 			
-			if let from = fromNode
-			{
-				if let to = toNode
-				{
-					from.addParentNode(to)
-					to.addDependantNode(from)
-				}
+			ifNotNil(fromNode, toNode) {
+				from, to in
+				
+				from.addParentNode(to)
+				to.addDependantNode(from)
 			}
 		}
 	}
@@ -254,13 +242,11 @@ class AsyncGraph
 	
 		let graphGroup = dispatch_group_create();
 	
-		let keys = self.nodeDictionary.keys
-		for key in keys
+		for (key, node) in self.nodeDictionary
 		{
-			let node = self.nodeDictionary[key]!
-	
 			dispatch_group_async(graphGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
 				[unowned self] in
+				
 				node.process(self, processor)
 			}
 		}

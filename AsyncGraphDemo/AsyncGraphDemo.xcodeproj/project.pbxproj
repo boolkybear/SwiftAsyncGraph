@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A7245E6A1A7D941F0053982E /* IfNotNil.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7245E691A7D941F0053982E /* IfNotNil.swift */; };
+		A7245E6B1A7D96A70053982E /* AsyncGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7ED16181A2E441E008F3947 /* AsyncGraph.swift */; };
+		A7245E6C1A7D96AF0053982E /* IfNotNil.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7245E691A7D941F0053982E /* IfNotNil.swift */; };
 		A7ED15F91A2E43F8008F3947 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7ED15F81A2E43F8008F3947 /* AppDelegate.swift */; };
 		A7ED15FB1A2E43F8008F3947 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7ED15FA1A2E43F8008F3947 /* ViewController.swift */; };
 		A7ED15FE1A2E43F8008F3947 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A7ED15FC1A2E43F8008F3947 /* Main.storyboard */; };
@@ -27,6 +30,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A7245E691A7D941F0053982E /* IfNotNil.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IfNotNil.swift; sourceTree = "<group>"; };
 		A7ED15F31A2E43F8008F3947 /* AsyncGraphDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AsyncGraphDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7ED15F71A2E43F8008F3947 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A7ED15F81A2E43F8008F3947 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -82,6 +86,7 @@
 				A7ED16181A2E441E008F3947 /* AsyncGraph.swift */,
 				A7ED15F81A2E43F8008F3947 /* AppDelegate.swift */,
 				A7ED15FA1A2E43F8008F3947 /* ViewController.swift */,
+				A7245E691A7D941F0053982E /* IfNotNil.swift */,
 				A7ED15FC1A2E43F8008F3947 /* Main.storyboard */,
 				A7ED15FF1A2E43F8008F3947 /* Images.xcassets */,
 				A7ED16011A2E43F8008F3947 /* LaunchScreen.xib */,
@@ -215,6 +220,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7245E6A1A7D941F0053982E /* IfNotNil.swift in Sources */,
 				A7ED15FB1A2E43F8008F3947 /* ViewController.swift in Sources */,
 				A7ED16191A2E441E008F3947 /* AsyncGraph.swift in Sources */,
 				A7ED15F91A2E43F8008F3947 /* AppDelegate.swift in Sources */,
@@ -225,7 +231,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7245E6C1A7D96AF0053982E /* IfNotNil.swift in Sources */,
 				A7ED160F1A2E43F8008F3947 /* AsyncGraphDemoTests.swift in Sources */,
+				A7245E6B1A7D96A70053982E /* AsyncGraph.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -409,6 +417,7 @@
 				A7ED16141A2E43F8008F3947 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		A7ED16151A2E43F8008F3947 /* Build configuration list for PBXNativeTarget "AsyncGraphDemoTests" */ = {
 			isa = XCConfigurationList;
@@ -417,6 +426,7 @@
 				A7ED16171A2E43F8008F3947 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

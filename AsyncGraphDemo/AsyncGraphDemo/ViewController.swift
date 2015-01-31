@@ -51,14 +51,14 @@ class ViewController: UIViewController {
 		
 		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(personUpdate),
 														NodeDefinition(personCommit),
-														NodeDefinition(personDataUpdate),
+														NodeDefinition(personDataUpdate, true),
 														NodeDefinition(personDataCommit),
 														NodeDefinition(unrelatedUpdate),
 														NodeDefinition(personValuesUpdate) ],
 			dependencies: [	DependencyDefinition(from: personUpdate, to: personCommit),
 							DependencyDefinition(from: personDataCommit, to: personUpdate),
 							DependencyDefinition(from: personValuesUpdate, to: personUpdate),
-							DependencyDefinition(from: personDataUpdate, to: personDataCommit) ]))
+							DependencyDefinition(from: personDataUpdate, to: personDataCommit, personCommit) ]))
 		
 		srand(UInt32(time(nil)))
 		let operationValues = [ "commit", "update" ];

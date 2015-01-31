@@ -21,16 +21,111 @@ class AsyncGraphDemoTests: XCTestCase {
         super.tearDown()
     }
     
-    func testExample() {
-        // This is an example of a functional test case.
-        XCTAssert(true, "Pass")
-    }
-    
-    func testPerformanceExample() {
-        // This is an example of a performance test case.
-        self.measureBlock() {
-            // Put the code you want to measure the time of here.
-        }
-    }
-    
+//    func testExample() {
+//        // This is an example of a functional test case.
+//        XCTAssert(true, "Pass")
+//    }
+//    
+//    func testPerformanceExample() {
+//        // This is an example of a performance test case.
+//        self.measureBlock() {
+//            // Put the code you want to measure the time of here.
+//        }
+//    }
+	
+	func testNodeIdentifiers()
+	{
+		let node1nil = NodeIdentifier("one")
+		let node1tag = NodeIdentifier("one", 1)
+		let node2nil = NodeIdentifier("two")
+		let node2tag = NodeIdentifier("two", 1)
+		let other1nil = NodeIdentifier("one")
+		let other1tag1 = NodeIdentifier("one", 1)
+		let other1tag2 = NodeIdentifier("one", 2)
+		
+		XCTAssertNotEqual(node1nil, node1tag, "Nodes with different tags should not be equal")
+		XCTAssertNotEqual(node1nil, node2nil, "Nodes with different identifiers should not be equal")
+		XCTAssertNotEqual(node1tag, node2tag, "Nodes with different identifiers should not be equal, even tag is equal")
+		XCTAssertEqual(node1nil, other1nil, "Nodes with same identifier and same tag should be equal")
+		XCTAssertEqual(node1tag, other1tag1, "Nodes with same identifier and same tag should be equal")
+		XCTAssertNotEqual(node1tag, other1tag2, "Nodes with different tags should not be equal, even identifier is equal")
+	}
+
+	func testTwoIndependentItems()
+	{
+		let firstIdentifier = NodeIdentifier("first")
+		let secondIdentifier = NodeIdentifier("second")
+		
+		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(firstIdentifier),
+			NodeDefinition(secondIdentifier), ],
+			dependencies: []))
+		
+		let times: [ String : NSTimeInterval ] = [ "first" : 0.5,
+			"second" : 1.0, ]
+		var finishOrder = [String]()
+		
+		graph.process {
+			nodeIdentifier in
+			
+			NSThread.sleepForTimeInterval(NSTimeInterval(times[nodeIdentifier.identifier]!))
+			
+			finishOrder.append(nodeIdentifier.identifier)
+			
+			return nil
+		}
+		
+		XCTAssertEqual(finishOrder, [ "first", "second" ], "Finish order should be first, second")
+	}
+	
+	func testTwoDependentItems()
+	{
+		let firstIdentifier = NodeIdentifier("first")
+		let secondIdentifier = NodeIdentifier("second")
+		
+		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(firstIdentifier),
+			NodeDefinition(secondIdentifier), ],
+			dependencies: [	DependencyDefinition(from: secondIdentifier, to: firstIdentifier), ]))
+		
+		let times: [ String : NSTimeInterval ] = [ "first" : 0.5,
+			"second" : 1.0, ]
+		var finishOrder = [String]()
+		
+		graph.process {
+			nodeIdentifier in
+			
+			NSThread.sleepForTimeInterval(NSTimeInterval(times[nodeIdentifier.identifier]!))
+			
+			finishOrder.append(nodeIdentifier.identifier)
+			
+			return nil
+		}
+		
+		XCTAssertEqual(finishOrder, [ "first", "second" ], "Finish order should be first, second")
+	}
+	
+	func testTwoDependentItemsReversed()
+	{
+		let firstIdentifier = NodeIdentifier("first")
+		let secondIdentifier = NodeIdentifier("second")
+		
+		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(firstIdentifier),
+			NodeDefinition(secondIdentifier), ],
+			dependencies: [	DependencyDefinition(from: firstIdentifier, to: secondIdentifier), ]))
+		
+		let times: [ String : NSTimeInterval ] = [ "first" : 0.5,
+			"second" : 1.0, ]
+		var finishOrder = [String]()
+		
+		graph.process {
+			nodeIdentifier in
+			
+			NSThread.sleepForTimeInterval(NSTimeInterval(times[nodeIdentifier.identifier]!))
+			
+			finishOrder.append(nodeIdentifier.identifier)
+			
+			return nil
+		}
+		
+		XCTAssertEqual(finishOrder, [ "second", "first" ], "Finish order should be second, first")
+	}
 }
