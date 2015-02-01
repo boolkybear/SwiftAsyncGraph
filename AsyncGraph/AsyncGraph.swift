@@ -30,12 +30,8 @@ struct NodeIdentifier: Hashable
 	
 	var hashValue: Int
 	{
-		var tagStr = "tag = (null)"
-		if let tagValue = self.tag
-		{
-			tagStr = "tag = \(tagValue)"
-		}
-		let fullStr = "identifier = \(self.identifier); \(tagStr)"
+		let tagStr = self.tag != nil ? "\(self.tag)" : "(null)"
+		let fullStr = "identifier = \(self.identifier); tag = \(tagStr)"
 		
 		return fullStr.hashValue
 	}
@@ -65,14 +61,8 @@ struct DependencyDefinition
 	
 	init(from: NodeIdentifier, to: NodeIdentifier...)
 	{
-		var parents = [NodeIdentifier]()
-		for parent in to
-		{
-			parents.append(parent)
-		}
-		
 		self.from = from
-		self.to = parents
+		self.to = [NodeIdentifier](to)
 	}
 }
 
@@ -80,6 +70,93 @@ struct GraphDefinition
 {
 	let nodes: [NodeDefinition]
 	let dependencies: [DependencyDefinition]
+}
+
+struct GraphDefinitionBuilder
+{
+	var nodes: [NodeDefinition] = [NodeDefinition]()
+	var dependencies: [DependencyDefinition] = [DependencyDefinition]()
+	
+	init()
+	{
+	}
+	
+	init(nodes: [NodeDefinition], dependencies: [DependencyDefinition])
+	{
+		self.nodes = nodes
+		self.dependencies = dependencies
+	}
+	
+	func addNode(nodeIdentifier: NodeIdentifier) -> GraphDefinitionBuilder
+	{
+		var newNodes = self.nodes
+		newNodes.append(NodeDefinition(nodeIdentifier))
+		
+		return GraphDefinitionBuilder(nodes: newNodes, dependencies: self.dependencies)
+	}
+	
+	func addNode(identifier: String) -> GraphDefinitionBuilder
+	{
+		return self.addNode(NodeIdentifier(identifier))
+	}
+	
+	func addNode(identifier: String, tag: Int) -> GraphDefinitionBuilder
+	{
+		return self.addNode(NodeIdentifier(identifier, tag))
+	}
+	
+	func addDependency(from: NodeIdentifier, to: NodeIdentifier) -> GraphDefinitionBuilder
+	{
+		var newDependencies = self.dependencies
+		newDependencies.append(DependencyDefinition(from: from, to: to))
+		
+		return GraphDefinitionBuilder(nodes: self.nodes, dependencies: newDependencies)
+	}
+	
+	func addDependency(fromIdentifier: String, toIdentifier: String) -> GraphDefinitionBuilder
+	{
+		return self.addDependency(NodeIdentifier(fromIdentifier), to: NodeIdentifier(toIdentifier))
+	}
+	
+	func addDependency(fromIdentifier: String, fromTag: Int, toIdentifier: String) -> GraphDefinitionBuilder
+	{
+		return self.addDependency(NodeIdentifier(fromIdentifier, fromTag), to: NodeIdentifier(toIdentifier))
+	}
+	
+	func addDependency(fromIdentifier: String, toIdentifier: String, toTag: Int) -> GraphDefinitionBuilder
+	{
+		return self.addDependency(NodeIdentifier(fromIdentifier), to: NodeIdentifier(toIdentifier, toTag))
+	}
+	
+	func addDependency(fromIdentifier: String, fromTag: Int, toIdentifier: String, toTag: Int) -> GraphDefinitionBuilder
+	{
+		return self.addDependency(NodeIdentifier(fromIdentifier, fromTag), to: NodeIdentifier(toIdentifier, toTag))
+	}
+	
+	func addDependency(fromIdentifier: String, to: NodeIdentifier) -> GraphDefinitionBuilder
+	{
+		return self.addDependency(NodeIdentifier(fromIdentifier), to: to)
+	}
+	
+	func addDependency(fromIdentifier: String, fromTag: Int, to: NodeIdentifier) -> GraphDefinitionBuilder
+	{
+		return self.addDependency(NodeIdentifier(fromIdentifier, fromTag), to: to)
+	}
+	
+	func addDependency(from: NodeIdentifier, toIdentifier: String) -> GraphDefinitionBuilder
+	{
+		return self.addDependency(from, to: NodeIdentifier(toIdentifier))
+	}
+	
+	func addDependency(from: NodeIdentifier, toIdentifier: String, toTag: Int) -> GraphDefinitionBuilder
+	{
+		return self.addDependency(from, to: NodeIdentifier(toIdentifier, toTag))
+	}
+	
+	func definition() -> GraphDefinition
+	{
+		return GraphDefinition(nodes: self.nodes, dependencies: self.dependencies)
+	}
 }
 
 func ==(lhs: NodeIdentifier, rhs: NodeIdentifier) -> Bool
@@ -103,10 +180,10 @@ class AsyncGraph
 		private var dependantNodes: [AsyncGraphNode]
 		
 		private var privateStatus: AsyncGraphStatus
-		var status: AsyncGraphStatus { get { return self.privateStatus } }
+		var status: AsyncGraphStatus { return self.privateStatus }
 		
 		private var privateResult: NodeResult?
-		var result: NodeResult? { get { return self.privateResult } }
+		var result: NodeResult? { return self.privateResult }
 		
 		required init(_ definition: NodeDefinition)
 		{
@@ -178,9 +255,9 @@ class AsyncGraph
 	private var mutexQueue: dispatch_queue_t
 	
 	private var privateStatus: AsyncGraphStatus
-	var status: AsyncGraphStatus { get { return self.privateStatus } }
+	var status: AsyncGraphStatus { return self.privateStatus }
 	
-	init(definition: GraphDefinition?)
+	init(_ definition: GraphDefinition?)
 	{
 		self.concurrentProcessCount = 0
 		self.nonConcurrentProcessCount = 0
@@ -193,14 +270,14 @@ class AsyncGraph
 	
 		self.nodeDictionary = [ NodeIdentifier : AsyncGraphNode ]()
 	
-		if let graphDefinition = definition
+		if let definition = definition
 		{
-			for nodeDefinition in graphDefinition.nodes
+			for nodeDefinition in definition.nodes
 			{
 				self.addNodeWithDefinition(nodeDefinition)
 			}
 			
-			for dependencyDefinition in graphDefinition.dependencies
+			for dependencyDefinition in definition.dependencies
 			{
 				let from = dependencyDefinition.from
 				
@@ -214,7 +291,12 @@ class AsyncGraph
 	
 	convenience init()
 	{
-		self.init(definition: nil)
+		self.init(nil)
+	}
+	
+	convenience init(builder: GraphDefinitionBuilder)
+	{
+		self.init(builder.definition())
 	}
 	
 	func addNodeWithDefinition(definition: NodeDefinition)
@@ -254,13 +336,11 @@ class AsyncGraph
 	
 		let graphGroup = dispatch_group_create();
 	
-		let keys = self.nodeDictionary.keys
-		for key in keys
+		for (key, node) in self.nodeDictionary
 		{
-			let node = self.nodeDictionary[key]!
-	
 			dispatch_group_async(graphGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
 				[unowned self] in
+				
 				node.process(self, processor)
 			}
 		}

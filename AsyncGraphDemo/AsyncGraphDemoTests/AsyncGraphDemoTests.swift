@@ -53,12 +53,7 @@ class AsyncGraphDemoTests: XCTestCase {
 
 	func testTwoIndependentItems()
 	{
-		let firstIdentifier = NodeIdentifier("first")
-		let secondIdentifier = NodeIdentifier("second")
-		
-		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(firstIdentifier),
-			NodeDefinition(secondIdentifier), ],
-			dependencies: []))
+		let graph = AsyncGraph(builder: GraphDefinitionBuilder().addNode("first").addNode("second"))
 		
 		let times: [ String : NSTimeInterval ] = [ "first" : 0.5,
 			"second" : 1.0, ]
@@ -79,12 +74,9 @@ class AsyncGraphDemoTests: XCTestCase {
 	
 	func testTwoDependentItems()
 	{
-		let firstIdentifier = NodeIdentifier("first")
-		let secondIdentifier = NodeIdentifier("second")
-		
-		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(firstIdentifier),
-			NodeDefinition(secondIdentifier), ],
-			dependencies: [	DependencyDefinition(from: secondIdentifier, to: firstIdentifier), ]))
+		let graph = AsyncGraph(builder: GraphDefinitionBuilder()
+			.addNode("first").addNode("second")
+			.addDependency("second", toIdentifier: "first"))
 		
 		let times: [ String : NSTimeInterval ] = [ "first" : 0.5,
 			"second" : 1.0, ]
@@ -105,12 +97,9 @@ class AsyncGraphDemoTests: XCTestCase {
 	
 	func testTwoDependentItemsReversed()
 	{
-		let firstIdentifier = NodeIdentifier("first")
-		let secondIdentifier = NodeIdentifier("second")
-		
-		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(firstIdentifier),
-			NodeDefinition(secondIdentifier), ],
-			dependencies: [	DependencyDefinition(from: firstIdentifier, to: secondIdentifier), ]))
+		let graph = AsyncGraph(builder: GraphDefinitionBuilder()
+			.addNode("first").addNode("second")
+			.addDependency("first", toIdentifier: "second"))
 		
 		let times: [ String : NSTimeInterval ] = [ "first" : 0.5,
 			"second" : 1.0, ]

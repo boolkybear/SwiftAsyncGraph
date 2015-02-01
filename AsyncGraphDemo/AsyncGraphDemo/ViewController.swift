@@ -41,24 +41,19 @@ class ViewController: UIViewController {
 	}
 
 	func asyncGraphDemo()
-	{
-		let personUpdate = NodeIdentifier(Entity.Person.rawValue, Operation.Update.rawValue)
-		let personCommit = NodeIdentifier(Entity.Person.rawValue, Operation.Commit.rawValue)
-		let personDataUpdate = NodeIdentifier(Entity.PersonData.rawValue, Operation.Update.rawValue)
-		let personDataCommit = NodeIdentifier(Entity.PersonData.rawValue, Operation.Commit.rawValue)
-		let unrelatedUpdate = NodeIdentifier(Entity.Unrelated.rawValue, Operation.Update.rawValue)
-		let personValuesUpdate = NodeIdentifier(Entity.PersonValues.rawValue, Operation.Update.rawValue)
-		
-		let graph = AsyncGraph(GraphDefinition(nodes: [	NodeDefinition(personUpdate),
-														NodeDefinition(personCommit),
-														NodeDefinition(personDataUpdate, true),
-														NodeDefinition(personDataCommit),
-														NodeDefinition(unrelatedUpdate),
-														NodeDefinition(personValuesUpdate) ],
-			dependencies: [	DependencyDefinition(from: personUpdate, to: personCommit),
-							DependencyDefinition(from: personDataCommit, to: personUpdate),
-							DependencyDefinition(from: personValuesUpdate, to: personUpdate),
-							DependencyDefinition(from: personDataUpdate, to: personDataCommit, personCommit) ]))
+	{		
+		let graph = AsyncGraph(builder: GraphDefinitionBuilder()
+			.addNode(Entity.Person.rawValue, tag: Operation.Update.rawValue)
+			.addNode(Entity.Person.rawValue, tag: Operation.Commit.rawValue)
+			.addNode(Entity.PersonData.rawValue, tag: Operation.Update.rawValue)
+			.addNode(Entity.PersonData.rawValue, tag: Operation.Commit.rawValue)
+			.addNode(Entity.Unrelated.rawValue, tag: Operation.Update.rawValue)
+			.addNode(Entity.PersonValues.rawValue, tag: Operation.Update.rawValue)
+			.addDependency(Entity.Person.rawValue, fromTag: Operation.Update.rawValue, toIdentifier: Entity.Person.rawValue, toTag: Operation.Commit.rawValue)
+			.addDependency(Entity.PersonData.rawValue, fromTag: Operation.Commit.rawValue, toIdentifier: Entity.Person.rawValue, toTag: Operation.Update.rawValue)
+			.addDependency(Entity.PersonValues.rawValue, fromTag: Operation.Update.rawValue, toIdentifier: Entity.Person.rawValue, toTag: Operation.Update.rawValue)
+			.addDependency(Entity.PersonData.rawValue, fromTag: Operation.Update.rawValue, toIdentifier: Entity.PersonData.rawValue, toTag: Operation.Commit.rawValue)
+			.addDependency(Entity.PersonData.rawValue, fromTag: Operation.Update.rawValue, toIdentifier: Entity.Person.rawValue, toTag: Operation.Commit.rawValue))
 		
 		srand(UInt32(time(nil)))
 		let operationValues = [ "commit", "update" ];
