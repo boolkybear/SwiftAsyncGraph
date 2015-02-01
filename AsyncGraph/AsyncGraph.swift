@@ -87,22 +87,22 @@ struct GraphDefinitionBuilder
 		self.dependencies = dependencies
 	}
 	
-	func addNode(nodeIdentifier: NodeIdentifier) -> GraphDefinitionBuilder
+	func addNode(nodeIdentifier: NodeIdentifier, isConcurrent: Bool = true) -> GraphDefinitionBuilder
 	{
 		var newNodes = self.nodes
-		newNodes.append(NodeDefinition(nodeIdentifier))
+		newNodes.append(NodeDefinition(nodeIdentifier, isConcurrent))
 		
 		return GraphDefinitionBuilder(nodes: newNodes, dependencies: self.dependencies)
 	}
 	
-	func addNode(identifier: String) -> GraphDefinitionBuilder
+	func addNode(identifier: String, isConcurrent: Bool = true) -> GraphDefinitionBuilder
 	{
-		return self.addNode(NodeIdentifier(identifier))
+		return self.addNode(NodeIdentifier(identifier), isConcurrent: isConcurrent)
 	}
 	
-	func addNode(identifier: String, tag: Int) -> GraphDefinitionBuilder
+	func addNode(identifier: String, tag: Int, isConcurrent: Bool = true) -> GraphDefinitionBuilder
 	{
-		return self.addNode(NodeIdentifier(identifier, tag))
+		return self.addNode(NodeIdentifier(identifier, tag), isConcurrent: isConcurrent)
 	}
 	
 	func addDependency(from: NodeIdentifier, to: NodeIdentifier) -> GraphDefinitionBuilder
@@ -316,15 +316,12 @@ class AsyncGraph
 	{
 		if self.status == .Initialized
 		{
-			let fromNode = self.nodeDictionary[from]
-			let toNode = self.nodeDictionary[to]
-			
-			if let from = fromNode
+			if let fromNode = self.nodeDictionary[from]
 			{
-				if let to = toNode
+				if let toNode = self.nodeDictionary[to]
 				{
-					from.addParentNode(to)
-					to.addDependantNode(from)
+					fromNode.addParentNode(toNode)
+					toNode.addDependantNode(fromNode)
 				}
 			}
 		}
