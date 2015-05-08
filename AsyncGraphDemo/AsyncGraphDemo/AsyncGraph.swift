@@ -10,242 +10,42 @@ import Foundation
 
 enum AsyncGraphStatus
 {
-	case Initialized
-	case Waiting
+	case Initializing
 	case Processing
-	case Processed
 	case Cancelled
+	case Paused
+	case Processed
 }
 
-struct NodeIdentifier: Hashable
+private struct AsyncGraphNodeDefinition<NodeIdentifier: Hashable, NodeResult>
 {
-	let identifier: String
-	let tag: Int? = nil
+	typealias NodeOperation = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> NodeResult?
 	
-	init (_ identifier: String, _ tag: Int? = nil)
-	{
-		self.identifier = identifier
-		self.tag = tag
-	}
-	
-	var hashValue: Int
-	{
-		let tagStr = self.tag != nil ? "\(self.tag)" : "(null)"
-		let fullStr = "identifier = \(self.identifier); tag = \(tagStr)"
-		
-		return fullStr.hashValue
-	}
-}
-
-struct NodeDefinition
-{
 	let identifier: NodeIdentifier
-	let isConcurrent: Bool = true
-	
-	init(_ identifier: String, _ tag: Int? = nil, _ isConcurrent: Bool = true)
-	{
-		self.init(NodeIdentifier(identifier, tag), isConcurrent)
-	}
-	
-	init(_ identifier: NodeIdentifier, _ isConcurrent: Bool = true)
-	{
-		self.identifier = identifier
-		self.isConcurrent = isConcurrent
-	}
+	let isConcurrent: Bool
+	let operation: NodeOperation?
 }
 
-struct DependencyDefinition
-{
-	let from: NodeIdentifier
-	let to: [NodeIdentifier]
+class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
+	typealias NodeOperation = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> NodeResult?
+	typealias NodeHook = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> Void
+	typealias GraphHook = (AsyncGraph<NodeIdentifier, NodeResult>) -> Void
 	
-	init(from: NodeIdentifier, to: NodeIdentifier...)
-	{
-		self.from = from
-		self.to = [NodeIdentifier](to)
-	}
-}
-
-struct GraphDefinition
-{
-	let nodes: [NodeDefinition]
-	let dependencies: [DependencyDefinition]
-}
-
-struct GraphDefinitionBuilder
-{
-	var nodes: [NodeDefinition] = [NodeDefinition]()
-	var dependencies: [DependencyDefinition] = [DependencyDefinition]()
+	private var operationQueue: NSOperationQueue? = nil
 	
-	init()
-	{
-	}
+	private var nodes: [ NodeIdentifier : AsyncGraphNodeDefinition<NodeIdentifier, NodeResult> ]
+	private var dependencies: [ NodeIdentifier : Set<NodeIdentifier> ]
+	private var results: [ NodeIdentifier : NodeResult? ]
 	
-	init(nodes: [NodeDefinition], dependencies: [DependencyDefinition])
-	{
-		self.nodes = nodes
-		self.dependencies = dependencies
-	}
+	private var defaultOperation: NodeOperation?
 	
-	func addNode(nodeIdentifier: NodeIdentifier, isConcurrent: Bool = true) -> GraphDefinitionBuilder
-	{
-		var newNodes = self.nodes
-		newNodes.append(NodeDefinition(nodeIdentifier, isConcurrent))
-		
-		return GraphDefinitionBuilder(nodes: newNodes, dependencies: self.dependencies)
-	}
+	private (set) var status: AsyncGraphStatus
 	
-	func addNode(identifier: String, isConcurrent: Bool = true) -> GraphDefinitionBuilder
-	{
-		return self.addNode(NodeIdentifier(identifier), isConcurrent: isConcurrent)
-	}
+	private var hooksBefore: [ NodeIdentifier : [NodeHook] ]
+	private var hooksAfter: [ NodeIdentifier : [NodeHook] ]
+	private var graphHooks: [ GraphHook ]
 	
-	func addNode(identifier: String, tag: Int, isConcurrent: Bool = true) -> GraphDefinitionBuilder
-	{
-		return self.addNode(NodeIdentifier(identifier, tag), isConcurrent: isConcurrent)
-	}
-	
-	func addDependency(from: NodeIdentifier, to: NodeIdentifier) -> GraphDefinitionBuilder
-	{
-		var newDependencies = self.dependencies
-		newDependencies.append(DependencyDefinition(from: from, to: to))
-		
-		return GraphDefinitionBuilder(nodes: self.nodes, dependencies: newDependencies)
-	}
-	
-	func addDependency(fromIdentifier: String, toIdentifier: String) -> GraphDefinitionBuilder
-	{
-		return self.addDependency(NodeIdentifier(fromIdentifier), to: NodeIdentifier(toIdentifier))
-	}
-	
-	func addDependency(fromIdentifier: String, fromTag: Int, toIdentifier: String) -> GraphDefinitionBuilder
-	{
-		return self.addDependency(NodeIdentifier(fromIdentifier, fromTag), to: NodeIdentifier(toIdentifier))
-	}
-	
-	func addDependency(fromIdentifier: String, toIdentifier: String, toTag: Int) -> GraphDefinitionBuilder
-	{
-		return self.addDependency(NodeIdentifier(fromIdentifier), to: NodeIdentifier(toIdentifier, toTag))
-	}
-	
-	func addDependency(fromIdentifier: String, fromTag: Int, toIdentifier: String, toTag: Int) -> GraphDefinitionBuilder
-	{
-		return self.addDependency(NodeIdentifier(fromIdentifier, fromTag), to: NodeIdentifier(toIdentifier, toTag))
-	}
-	
-	func addDependency(fromIdentifier: String, to: NodeIdentifier) -> GraphDefinitionBuilder
-	{
-		return self.addDependency(NodeIdentifier(fromIdentifier), to: to)
-	}
-	
-	func addDependency(fromIdentifier: String, fromTag: Int, to: NodeIdentifier) -> GraphDefinitionBuilder
-	{
-		return self.addDependency(NodeIdentifier(fromIdentifier, fromTag), to: to)
-	}
-	
-	func addDependency(from: NodeIdentifier, toIdentifier: String) -> GraphDefinitionBuilder
-	{
-		return self.addDependency(from, to: NodeIdentifier(toIdentifier))
-	}
-	
-	func addDependency(from: NodeIdentifier, toIdentifier: String, toTag: Int) -> GraphDefinitionBuilder
-	{
-		return self.addDependency(from, to: NodeIdentifier(toIdentifier, toTag))
-	}
-	
-	func definition() -> GraphDefinition
-	{
-		return GraphDefinition(nodes: self.nodes, dependencies: self.dependencies)
-	}
-}
-
-func ==(lhs: NodeIdentifier, rhs: NodeIdentifier) -> Bool
-{
-	return lhs.identifier == rhs.identifier && lhs.tag == rhs.tag
-}
-
-class AsyncGraph
-{
-	typealias NodeResult = Any
-	typealias NodeProcessor = (NodeIdentifier) -> NodeResult?
-	
-	private class AsyncGraphNode
-	{
-		let identifier: NodeIdentifier
-		let isConcurrent: Bool
-		
-		private let semaphore: dispatch_semaphore_t
-		
-		private var parentNodes: [AsyncGraphNode]
-		private var dependantNodes: [AsyncGraphNode]
-		
-		private var privateStatus: AsyncGraphStatus
-		var status: AsyncGraphStatus { return self.privateStatus }
-		
-		private var privateResult: NodeResult?
-		var result: NodeResult? { return self.privateResult }
-		
-		required init(_ definition: NodeDefinition)
-		{
-			self.identifier = definition.identifier
-			self.isConcurrent = definition.isConcurrent
-			
-			self.semaphore = dispatch_semaphore_create(1);
-			
-			self.parentNodes = [AsyncGraphNode]()
-			self.dependantNodes = [AsyncGraphNode]()
-			
-			self.privateResult = nil
-			self.privateStatus = .Initialized
-		}
-		
-		func addParentNode(node: AsyncGraphNode)
-		{
-			if self.status == .Initialized || self.status == .Waiting
-			{
-				self.parentNodes.append(node)
-			}
-		}
-		
-		func addDependantNode(node: AsyncGraphNode)
-		{
-			if self.status == .Initialized || self.status == .Waiting
-			{
-				self.dependantNodes.append(node)
-			}
-		}
-		
-		func process(graph: AsyncGraph, processor: NodeProcessor)
-		{
-			self.privateStatus = .Waiting
-			
-			for i in 0...self.parentNodes.count
-			{
-				dispatch_semaphore_wait(self.semaphore, DISPATCH_TIME_FOREVER)
-			}
-			
-			self.privateStatus = .Processing
-			graph.didStartProcessingNodeConcurrent(self.isConcurrent)
-			
-			if graph.isCancelled() == false
-			{
-				self.privateResult = processor(self.identifier)
-			}
-			
-			self.privateStatus = .Processed
-			graph.didEndProcessingNodeConcurrent(self.isConcurrent)
-			
-			for childNode in self.dependantNodes
-			{
-				dispatch_semaphore_signal(childNode.semaphore);
-			}
-			
-			dispatch_semaphore_signal(self.semaphore);
-		}
-	}
-	
-	private var nodeDictionary: [ NodeIdentifier : AsyncGraphNode ]
-	
+	// Concurrency
 	private var concurrentProcessCount: Int
 	private var nonConcurrentProcessCount: Int
 	private var concurrentSemaphore: dispatch_semaphore_t
@@ -254,11 +54,21 @@ class AsyncGraph
 	private var nonConcurrentQueue: dispatch_queue_t
 	private var mutexQueue: dispatch_queue_t
 	
-	private var privateStatus: AsyncGraphStatus
-	var status: AsyncGraphStatus { return self.privateStatus }
-	
-	init(_ definition: GraphDefinition?)
+	init(defaultOperation: NodeOperation? = nil)
 	{
+		self.operationQueue = nil
+		self.nodes = [ NodeIdentifier : AsyncGraphNodeDefinition<NodeIdentifier, NodeResult> ]()
+		self.dependencies = [ NodeIdentifier : Set<NodeIdentifier> ]()
+		self.results = [ NodeIdentifier : NodeResult? ]()
+		
+		self.defaultOperation = defaultOperation
+		self.status = AsyncGraphStatus.Initializing
+		
+		self.hooksBefore = [ NodeIdentifier : [NodeHook] ]()
+		self.hooksAfter = [ NodeIdentifier : [NodeHook] ]()
+		self.graphHooks = [ GraphHook ]()
+		
+		// Concurrency
 		self.concurrentProcessCount = 0
 		self.nonConcurrentProcessCount = 0
 		self.concurrentSemaphore = dispatch_semaphore_create(1)
@@ -266,93 +76,33 @@ class AsyncGraph
 		self.concurrentQueue = dispatch_queue_create("com.bybdesigns.asyncgraph.concurrentQueue", DISPATCH_QUEUE_SERIAL)
 		self.nonConcurrentQueue = dispatch_queue_create("com.bybdesigns.asyncgraph.nonConcurrentQueue", DISPATCH_QUEUE_SERIAL)
 		self.mutexQueue = dispatch_queue_create("com.bybdesigns.asyncgraph.mutexQueue", DISPATCH_QUEUE_SERIAL)
-		self.privateStatus = .Initialized
+	}
 	
-		self.nodeDictionary = [ NodeIdentifier : AsyncGraphNode ]()
-	
-		if let definition = definition
+	func addNodeWithIdentifier(identifier: NodeIdentifier, isConcurrent: Bool = true, operation: NodeOperation? = nil) -> AsyncGraph
+	{
+		if let duplicatedNode = self.nodes[identifier]
 		{
-			for nodeDefinition in definition.nodes
-			{
-				self.addNodeWithDefinition(nodeDefinition)
-			}
-			
-			for dependencyDefinition in definition.dependencies
-			{
-				let from = dependencyDefinition.from
-				
-				for to in dependencyDefinition.to
-				{
-					self.addDependencyFrom(from, to: to)
-				}
-			}
+			NSLog("Not adding \(identifier) to the graph, as it already exists")
 		}
-	}
-	
-	convenience init()
-	{
-		self.init(nil)
-	}
-	
-	convenience init(builder: GraphDefinitionBuilder)
-	{
-		self.init(builder.definition())
-	}
-	
-	func addNodeWithDefinition(definition: NodeDefinition)
-	{
-		if self.status == .Initialized
+		else
 		{
-			let node = self.nodeDictionary[definition.identifier]
-			if node == nil
-			{
-				let nodeToAdd = AsyncGraphNode(definition)
-				self.nodeDictionary.updateValue(nodeToAdd, forKey:definition.identifier)
-			}
-		}
-	}
-	
-	func addDependencyFrom(from: NodeIdentifier, to: NodeIdentifier)
-	{
-		if self.status == .Initialized
-		{
-			if let fromNode = self.nodeDictionary[from]
-			{
-				if let toNode = self.nodeDictionary[to]
-				{
-					fromNode.addParentNode(toNode)
-					toNode.addDependantNode(fromNode)
-				}
-			}
-		}
-	}
-	
-	func process(processor: NodeProcessor)
-	{
-		self.privateStatus = .Processing
-	
-		let graphGroup = dispatch_group_create();
-	
-		for (key, node) in self.nodeDictionary
-		{
-			dispatch_group_async(graphGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
-				[unowned self] in
-				
-				node.process(self, processor)
-			}
+			self.nodes[identifier] = AsyncGraphNodeDefinition(identifier: identifier, isConcurrent: isConcurrent, operation: operation)
 		}
 		
-		dispatch_group_wait(graphGroup, DISPATCH_TIME_FOREVER);
-	
-		if self.status == .Processing
-		{
-			self.privateStatus = .Processed
-		}
+		return self
 	}
 	
-	func resultFromNode(identifier: NodeIdentifier) -> NodeResult?
+	func addDependencyFrom(identifier: NodeIdentifier, to: NodeIdentifier) -> AsyncGraph
 	{
-		return self.nodeDictionary[identifier]?.result
+		return addDependencyFrom(identifier, toNodes: [to])
+	}
+	
+	func addDependencyFrom(identifier: NodeIdentifier, toNodes: [NodeIdentifier]) -> AsyncGraph
+	{
+		let parents = self.dependencies[identifier] ?? Set<NodeIdentifier>()
+		self.dependencies[identifier] = parents.union(toNodes)
+		
+		return self
 	}
 	
 	func didStartProcessingNodeConcurrent(isConcurrent: Bool)
@@ -382,7 +132,7 @@ class AsyncGraph
 					dispatch_semaphore_wait(self.concurrentSemaphore, DISPATCH_TIME_FOREVER);
 				}
 			}
-	
+			
 			dispatch_semaphore_wait(self.nonConcurrentSemaphore, DISPATCH_TIME_FOREVER);
 		}
 	}
@@ -402,7 +152,7 @@ class AsyncGraph
 		else				// non concurrent access (writer)
 		{
 			dispatch_semaphore_signal(self.nonConcurrentSemaphore)
-	
+			
 			dispatch_sync(self.nonConcurrentQueue) {
 				--self.nonConcurrentProcessCount;
 				if self.nonConcurrentProcessCount == 0
@@ -413,13 +163,185 @@ class AsyncGraph
 		}
 	}
 	
-	func cancel()
+	func fireHooks(hooks: [ NodeHook ]?, identifier: NodeIdentifier, operation: NSOperation, graph: AsyncGraph<NodeIdentifier, NodeResult>)
 	{
-		self.privateStatus = .Cancelled
+		if let hooks = hooks
+		{
+			for hook in hooks
+			{
+				hook(identifier, operation, self)
+			}
+		}
 	}
 	
-	func isCancelled() -> Bool
+	func operations() -> [ NSOperation ]
 	{
-		return (self.status == .Cancelled)
+		var operations = [ NodeIdentifier : NSOperation ]()
+		
+		for (identifier, node) in self.nodes
+		{
+			let operation = NSBlockOperation()
+			operation.addExecutionBlock() {
+				[unowned operation] in
+				
+				self.didStartProcessingNodeConcurrent(node.isConcurrent)
+				self.fireHooks(self.hooksBefore[identifier], identifier: identifier, operation: operation, graph: self)
+				
+				let result = node.operation?(node.identifier, operation, self) ?? self.defaultOperation?(node.identifier, operation, self)
+				self.results[identifier] = result
+				
+				self.fireHooks(self.hooksAfter[identifier], identifier: identifier, operation: operation, graph: self)
+				self.didEndProcessingNodeConcurrent(node.isConcurrent)
+			}
+			
+			operations[identifier] = operation
+		}
+		
+		for (identifier, dependencies) in self.dependencies
+		{
+			if let operation = operations[identifier]
+			{
+				for dependency in dependencies
+				{
+					if let dependency = operations[dependency]
+					{
+						operation.addDependency(dependency)
+					}
+				}
+			}
+		}
+		
+		return operations.values.array
+	}
+	
+	func resultFromNode(identifier: NodeIdentifier) -> NodeResult?
+	{
+		return self.results[identifier] ?? nil
+	}
+	
+	private func markAsProcessedAndFireHooks()
+	{
+		self.status = self.status == .Cancelled ? .Cancelled : .Processed
+		
+		for hook in self.graphHooks
+		{
+			hook(self)
+		}
+	}
+	
+	private func processAndWaitUntilFinished(waitUntilFinished: Bool)
+	{
+		if(self.status == .Initializing)
+		{
+			self.status = .Processing
+			
+			let operations = self.operations()
+			
+			if(waitUntilFinished)
+			{
+				let operationQueue = NSOperationQueue()
+				operationQueue.addOperations(operations, waitUntilFinished: true)
+				
+				self.markAsProcessedAndFireHooks()
+			}
+			else
+			{
+				self.operationQueue = NSOperationQueue()
+				self.operationQueue?.addOperations(operations, waitUntilFinished: false)
+				
+				dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)) {
+					self.operationQueue?.waitUntilAllOperationsAreFinished()
+					
+					self.markAsProcessedAndFireHooks()
+				}
+			}
+		}
+	}
+	
+	func processSynchronous()
+	{
+		self.processAndWaitUntilFinished(true)
+	}
+	
+	func process() -> AsyncGraph<NodeIdentifier, NodeResult>
+	{
+		self.processAndWaitUntilFinished(false)
+		
+		return self
+	}
+	
+	func pause()
+	{
+		if(self.status == .Processing)
+		{
+			self.status = .Paused
+			
+			self.operationQueue?.suspended = true
+		}
+	}
+	
+	func resume()
+	{
+		if(self.status == .Paused)
+		{
+			self.status = .Processing
+			
+			self.operationQueue?.suspended = false
+		}
+	}
+	
+	func cancel()
+	{
+		switch self.status
+		{
+		case .Processing: fallthrough
+		case .Paused:
+			self.operationQueue?.cancelAllOperations()
+			self.operationQueue?.suspended = false
+			
+			self.operationQueue?.waitUntilAllOperationsAreFinished()
+			
+			self.status = .Cancelled
+			
+		default:
+			break
+		}
+	}
+	
+	func addHookBeforeNode(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph
+	{
+		if var hooks = self.hooksBefore[identifier]
+		{
+			hooks.append(hook)
+			self.hooksBefore[identifier] = hooks
+		}
+		else
+		{
+			self.hooksBefore[identifier] = [ hook ]
+		}
+		
+		return self
+	}
+	
+	func addHookAfterNode(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph
+	{
+		if var hooks = self.hooksAfter[identifier]
+		{
+			hooks.append(hook)
+			self.hooksAfter[identifier] = hooks
+		}
+		else
+		{
+			self.hooksAfter[identifier] = [ hook ]
+		}
+		
+		return self
+	}
+	
+	func addHook(hook: GraphHook) -> AsyncGraph
+	{
+		self.graphHooks.append(hook)
+		
+		return self
 	}
 }

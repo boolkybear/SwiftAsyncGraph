@@ -20,6 +20,37 @@ enum Operation: Int
 {
 	case Commit = 0
 	case Update = 1
+	
+	func toString() -> String {
+		switch self
+		{
+		case .Commit:
+			return "commit"
+			
+		case .Update:
+			return "update"
+		}
+	}
+}
+
+struct NodeIdentifier: Hashable
+{
+	let entity: Entity
+	let operation: Operation?
+	
+	func toString() -> String {
+		let operationStr = self.operation.map { $0.toString() } ?? "null"
+
+		return "\(self.entity.rawValue) - \(operationStr)"
+	}
+	
+	var hashValue: Int {
+		return self.toString().hashValue
+	}
+}
+
+func == (lhs: NodeIdentifier, rhs: NodeIdentifier) -> Bool {
+	return lhs.entity == rhs.entity && lhs.operation == rhs.operation
 }
 
 class ViewController: UIViewController {
@@ -41,40 +72,44 @@ class ViewController: UIViewController {
 	}
 
 	func asyncGraphDemo()
-	{		
-		let graph = AsyncGraph(builder: GraphDefinitionBuilder()
-			.addNode(Entity.Person.rawValue, tag: Operation.Update.rawValue)
-			.addNode(Entity.Person.rawValue, tag: Operation.Commit.rawValue)
-			.addNode(Entity.PersonData.rawValue, tag: Operation.Update.rawValue)
-			.addNode(Entity.PersonData.rawValue, tag: Operation.Commit.rawValue)
-			.addNode(Entity.Unrelated.rawValue, tag: Operation.Update.rawValue)
-			.addNode(Entity.PersonValues.rawValue, tag: Operation.Update.rawValue)
-			.addDependency(Entity.Person.rawValue, fromTag: Operation.Update.rawValue, toIdentifier: Entity.Person.rawValue, toTag: Operation.Commit.rawValue)
-			.addDependency(Entity.PersonData.rawValue, fromTag: Operation.Commit.rawValue, toIdentifier: Entity.Person.rawValue, toTag: Operation.Update.rawValue)
-			.addDependency(Entity.PersonValues.rawValue, fromTag: Operation.Update.rawValue, toIdentifier: Entity.Person.rawValue, toTag: Operation.Update.rawValue)
-			.addDependency(Entity.PersonData.rawValue, fromTag: Operation.Update.rawValue, toIdentifier: Entity.PersonData.rawValue, toTag: Operation.Commit.rawValue)
-			.addDependency(Entity.PersonData.rawValue, fromTag: Operation.Update.rawValue, toIdentifier: Entity.Person.rawValue, toTag: Operation.Commit.rawValue))
+	{
+		let personUpdate = NodeIdentifier(entity: .Person, operation: .Update)
+		let personCommit = NodeIdentifier(entity: .Person, operation: .Commit)
+		let personDataUpdate = NodeIdentifier(entity: .PersonData, operation: .Update)
+		let personDataCommit = NodeIdentifier(entity: .PersonData, operation: .Commit)
+		let unrelatedUpdate = NodeIdentifier(entity: .Unrelated, operation: .Update)
+		let personValuesUpdate = NodeIdentifier(entity: .PersonValues, operation: .Update)
+		
+		let graph = AsyncGraph<NodeIdentifier, Void> {
+			identifier, operation, graph in
+			
+			let delay = (rand() & 0x7) + 1
+			
+			self.appendMessage("Processing \(identifier.toString()) (\(delay) seconds)")
+			
+			NSThread.sleepForTimeInterval(NSTimeInterval(delay))
+			
+			self.appendMessage("Processed \(identifier.toString())")
+			
+			return nil
+		}
+			.addNodeWithIdentifier(personUpdate)
+			.addNodeWithIdentifier(personCommit)
+			.addNodeWithIdentifier(personDataUpdate)
+			.addNodeWithIdentifier(personDataCommit)
+			.addNodeWithIdentifier(unrelatedUpdate)
+			.addNodeWithIdentifier(personValuesUpdate)
+			.addDependencyFrom(personUpdate, to: personCommit)
+			.addDependencyFrom(personDataCommit, to: personUpdate)
+			.addDependencyFrom(personValuesUpdate, to: personUpdate)
+			.addDependencyFrom(personDataUpdate, to: personDataCommit)
+			.addDependencyFrom(personDataUpdate, to: personCommit)
 		
 		srand(UInt32(time(nil)))
-		let operationValues = [ "commit", "update" ];
 		
 		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
 			self.appendMessage("Processing graph")
-			graph.process() {
-				nodeIdentifier in
-				
-				let operation = operationValues[nodeIdentifier.tag!]
-				
-				let delay = (rand() & 0x7) + 1
-				
-				self.appendMessage("Processing \(nodeIdentifier.identifier) - \(operation) (\(delay) seconds)")
-				
-				NSThread.sleepForTimeInterval(NSTimeInterval(delay))
-				
-				self.appendMessage("Processed \(nodeIdentifier.identifier) - \(operation)")
-				
-				return nil
-			}
+			graph.processSynchronous()
 			self.appendMessage("Processed graph")
 		}
 	}
