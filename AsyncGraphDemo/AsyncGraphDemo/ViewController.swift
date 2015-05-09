@@ -90,8 +90,6 @@ class ViewController: UIViewController {
 			NSThread.sleepForTimeInterval(NSTimeInterval(delay))
 			
 			self.appendMessage("Processed \(identifier.toString())")
-			
-			return nil
 		}
 			.addNodeWithIdentifier(personUpdate)
 			.addNodeWithIdentifier(personCommit)

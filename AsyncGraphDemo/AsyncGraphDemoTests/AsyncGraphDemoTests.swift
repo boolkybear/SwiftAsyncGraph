@@ -89,8 +89,6 @@ class AsyncGraphDemoTests: XCTestCase {
 			NSThread.sleepForTimeInterval(NSTimeInterval(times[nodeIdentifier]!))
 			
 			finishOrder.append(nodeIdentifier)
-			
-			return nil
 		}
 			.addNodeWithIdentifier("first")
 			.addNodeWithIdentifier("second")
@@ -111,8 +109,6 @@ class AsyncGraphDemoTests: XCTestCase {
 			NSThread.sleepForTimeInterval(NSTimeInterval(times[nodeIdentifier]!))
 			
 			finishOrder.append(nodeIdentifier)
-			
-			return nil
 		}
 			.addNodeWithIdentifier("first")
 			.addNodeWithIdentifier("second")
@@ -134,8 +130,6 @@ class AsyncGraphDemoTests: XCTestCase {
 			NSThread.sleepForTimeInterval(NSTimeInterval(times[nodeIdentifier]!))
 			
 			finishOrder.append(nodeIdentifier)
-			
-			return nil
 		}
 			.addNodeWithIdentifier("first")
 			.addNodeWithIdentifier("second")
@@ -147,7 +141,7 @@ class AsyncGraphDemoTests: XCTestCase {
 	
 	func testAsyncOperationGraph()
 	{
-		let graph = AsyncGraph<String, String>()
+		let graph = AsyncGraph<String, String?>()
 		
 		var result = [ String ]()
 		graph.addNodeWithIdentifier("5") {
@@ -174,7 +168,7 @@ class AsyncGraphDemoTests: XCTestCase {
 	
 	func testAsyncOperationGraphWithDependencies()
 	{
-		let graphWithDependencies = AsyncGraph<String, String>()
+		let graphWithDependencies = AsyncGraph<String, String?>()
 		
 		var resultWithDependencies = [ String ]()
 		graphWithDependencies.addNodeWithIdentifier("5") {
@@ -204,7 +198,7 @@ class AsyncGraphDemoTests: XCTestCase {
 	{
 		var resultDefault = [ String ]()
 		
-		let graphWithDefault = AsyncGraph<String, String> {
+		let graphWithDefault = AsyncGraph<String, Void> {
 			identifier, operation, graph in
 			
 			let timeInterval = NSTimeInterval(identifier.toInt() ?? 0)
@@ -212,8 +206,6 @@ class AsyncGraphDemoTests: XCTestCase {
 			NSThread.sleepForTimeInterval(timeInterval)
 			
 			resultDefault.append(identifier)
-			
-			return nil
 		}
 		
 		graphWithDefault.addNodeWithIdentifier("5")
@@ -249,12 +241,12 @@ class AsyncGraphDemoTests: XCTestCase {
 				
 				isCompleted = true
 			}
-			.addHookBeforeNode(3) {
+			.addHookBefore(3) {
 				identifier, operation, graph in
 				
 				before += identifier
 			}
-			.addHookAfterNode(5) {
+			.addHookAfter(5) {
 				identifier, operation, graph in
 				
 				after -= identifier
@@ -266,8 +258,8 @@ class AsyncGraphDemoTests: XCTestCase {
 		}
 		
 		XCTAssert(isCompleted, "Graph has not been completed")
-		XCTAssert(graph.resultFromNode(3) == "3")
-		XCTAssert(graph.resultFromNode(5) == "5")
+		XCTAssert(graph.resultFrom(3) == "3")
+		XCTAssert(graph.resultFrom(5) == "5")
 		XCTAssert(graph.status == .Processed)
 		XCTAssert(before == 3)
 		XCTAssert(after == -5)

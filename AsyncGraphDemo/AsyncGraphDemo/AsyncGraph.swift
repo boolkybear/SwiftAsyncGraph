@@ -19,7 +19,7 @@ enum AsyncGraphStatus
 
 private struct AsyncGraphNodeDefinition<NodeIdentifier: Hashable, NodeResult>
 {
-	typealias NodeOperation = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> NodeResult?
+	typealias NodeOperation = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> NodeResult
 	
 	let identifier: NodeIdentifier
 	let isConcurrent: Bool
@@ -27,7 +27,7 @@ private struct AsyncGraphNodeDefinition<NodeIdentifier: Hashable, NodeResult>
 }
 
 class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
-	typealias NodeOperation = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> NodeResult?
+	typealias NodeOperation = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> NodeResult
 	typealias NodeHook = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> Void
 	typealias GraphHook = (AsyncGraph<NodeIdentifier, NodeResult>) -> Void
 	
@@ -35,7 +35,7 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	
 	private var nodes: [ NodeIdentifier : AsyncGraphNodeDefinition<NodeIdentifier, NodeResult> ]
 	private var dependencies: [ NodeIdentifier : Set<NodeIdentifier> ]
-	private var results: [ NodeIdentifier : NodeResult? ]
+	private var results: [ NodeIdentifier : NodeResult ]
 	
 	private var defaultOperation: NodeOperation?
 	
@@ -59,7 +59,7 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 		self.operationQueue = nil
 		self.nodes = [ NodeIdentifier : AsyncGraphNodeDefinition<NodeIdentifier, NodeResult> ]()
 		self.dependencies = [ NodeIdentifier : Set<NodeIdentifier> ]()
-		self.results = [ NodeIdentifier : NodeResult? ]()
+		self.results = [ NodeIdentifier : NodeResult ]()
 		
 		self.defaultOperation = defaultOperation
 		self.status = AsyncGraphStatus.Initializing
@@ -214,9 +214,9 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 		return operations.values.array
 	}
 	
-	func resultFromNode(identifier: NodeIdentifier) -> NodeResult?
+	func resultFrom(identifier: NodeIdentifier) -> NodeResult?
 	{
-		return self.results[identifier] ?? nil
+		return self.results[identifier]
 	}
 	
 	private func markAsProcessedAndFireHooks()
@@ -308,7 +308,7 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 		}
 	}
 	
-	func addHookBeforeNode(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph
+	func addHookBefore(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph
 	{
 		if var hooks = self.hooksBefore[identifier]
 		{
@@ -323,7 +323,7 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 		return self
 	}
 	
-	func addHookAfterNode(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph
+	func addHookAfter(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph
 	{
 		if var hooks = self.hooksAfter[identifier]
 		{
