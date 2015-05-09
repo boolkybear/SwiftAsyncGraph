@@ -3,17 +3,16 @@ SwiftAsyncGraph
 
 AsyncGraph is a simple graph asynchronous processor, written in Swift. AsyncGraph can help you to simplify synchronization between asynchronous but related tasks. Each task would be represented as a graph node, and then you would specify dependencies between tasks. AsyncGraph will process the task nodes, taking care of the dependencies for you. This way, you can focus on writing each task code and leave synchronization to the graph.
 
-You can create a graph with an optional closure, and pass a closure to each node while defining the graph. When the graph is processed, it will execute the closure specified in the node. If no such closure exists, it will execute the default graph closure. This means that the node closures take precedence over the graph closure.
-
 Each task node will be executed in its own thread. You also have the possibility of defining non-concurrent nodes that will be executed exclusively, for example for dealing with high memory demand tasks or scarce resources. This has been modelled as [the second readers-writers problem](https://en.wikipedia.org/wiki/Readers%E2%80%93writers_problem#The_second_readers-writers_problem), with writer priority, where non-concurrent nodes are writers.
 
 How to use AsyncGraph
 ---------------------
 
-To use AsyncGraph, simply copy the AsyncGraph.swift file to your project. There is a sample iOS project, AsyncGraphDemo, showing an example of how it works. You can also browse the tests for some basic use cases.
+To use AsyncGraph, simply copy the AsyncGraph.swift file to your project. 
 
-Sample usage:
+**Sample usage:**
 
+```
 let simpleGraph = AsyncGraph<Int, Void> {
 	identifier, operation, graph in
 	println("Now executing node \(identifier)")
@@ -23,8 +22,11 @@ let simpleGraph = AsyncGraph<Int, Void> {
 .addDependencyFrom(3, to: 2)
 
 simpleGraph.processSynchronous()
+```
 
 This code will create a graph where its identifiers are Ints, and the return type of each node processed will be Void. Then, it adds 3 nodes with identifiers 1, 2, and 3, and sets the dependencies between them. When the graph is defined, the processSynchronous function processes the graph, blocking the current thread until all nodes have been processed. The nodes identified by 1 and 2 will execute concurrently, but node with identifier 3 will wait until node with identifier 2 has finished processing. The closure executed in each node will be the default one specified in the graph constructor, which simply prints the node identifier. The closure receives 3 parameters: the node identifier, the NSOperation object that is currently being execute as each node is really an NSOperation executed in a NSOperationQueue, and the graph itself. As the result type is Void, no return statement is needed.
+
+For more usage examples, check the AsyncGraphDemo project in this repository and the tests in that project.
 
 Features
 --------
