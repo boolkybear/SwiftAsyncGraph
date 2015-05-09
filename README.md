@@ -14,7 +14,6 @@ To use AsyncGraph, simply copy the AsyncGraph.swift file to your project. There 
 
 Sample usage:
 
-[code lang="objc"]
 let simpleGraph = AsyncGraph<Int, Void> {
 	identifier, operation, graph in
 	println("Now executing node \(identifier)")
@@ -24,7 +23,6 @@ let simpleGraph = AsyncGraph<Int, Void> {
 .addDependencyFrom(3, to: 2)
 
 simpleGraph.processSynchronous()
-[/code]
 
 This code will create a graph where its identifiers are Ints, and the return type of each node processed will be Void. Then, it adds 3 nodes with identifiers 1, 2, and 3, and sets the dependencies between them. When the graph is defined, the processSynchronous function processes the graph, blocking the current thread until all nodes have been processed. The nodes identified by 1 and 2 will execute concurrently, but node with identifier 3 will wait until node with identifier 2 has finished processing. The closure executed in each node will be the default one specified in the graph constructor, which simply prints the node identifier. The closure receives 3 parameters: the node identifier, the NSOperation object that is currently being execute as each node is really an NSOperation executed in a NSOperationQueue, and the graph itself. As the result type is Void, no return statement is needed.
 
