@@ -117,7 +117,7 @@ class ViewController: UIViewController {
 		dispatch_async(dispatch_get_main_queue()) {
 			self.messages.append(message)
 			
-			self.outputTextView.text = join("\n", self.messages)
+			self.outputTextView.text = self.messages.joinWithSeparator("\n")
 		}
 	}
 }

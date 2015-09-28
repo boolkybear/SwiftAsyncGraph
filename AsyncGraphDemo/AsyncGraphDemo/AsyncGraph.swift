@@ -8,8 +8,7 @@
 
 import Foundation
 
-enum AsyncGraphStatus
-{
+enum AsyncGraphStatus {
 	case Initializing
 	case Processing
 	case Cancelled
@@ -17,8 +16,7 @@ enum AsyncGraphStatus
 	case Processed
 }
 
-private struct AsyncGraphNodeDefinition<NodeIdentifier: Hashable, NodeResult>
-{
+private struct AsyncGraphNodeDefinition<NodeIdentifier: Hashable, NodeResult> {
 	typealias NodeOperation = (NodeIdentifier, NSOperation, AsyncGraph<NodeIdentifier, NodeResult>) -> NodeResult
 	
 	let identifier: NodeIdentifier
@@ -58,10 +56,9 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Graph constructor
 	
-		:param:	defaultOperation	Optional closure to be executed in case no closure is specified on a node
+		- parameter	defaultOperation:	Optional closure to be executed in case no closure is specified on a node
 	*/
-	init(defaultOperation: NodeOperation? = nil)
-	{
+	init(defaultOperation: NodeOperation? = nil) {
 		self.operationQueue = nil
 		self.nodes = [ NodeIdentifier : AsyncGraphNodeDefinition<NodeIdentifier, NodeResult> ]()
 		self.dependencies = [ NodeIdentifier : Set<NodeIdentifier> ]()
@@ -87,22 +84,18 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Adds a node to the graph. When processing, the code for this node will be executed in an NSOperation
 	
-		:param:	identifier	Identifier for this node. Can be whatever makes sense for your algorithm, but it must conform to Hashable and Equatable
-		:param:	isConcurrent	The default is true. If true, this node will execute concurrently with other nodes.
+		- parameter	identifier:	Identifier for this node. Can be whatever makes sense for your algorithm, but it must conform to Hashable and Equatable
+		- parameter	isConcurrent:	The default is true. If true, this node will execute concurrently with other nodes.
 								If false, the graph will wait for the nodes that are currently executing, then will execute this node exclusively,
 								and then will continue executing concurrent nodes. Useful for accessing to critical resources or constrained environments.
-		:param:	operation	Closure to execute in this node. If not specified, the closure executed will be the default one specified when creating the graph.
+		- parameter	operation:	Closure to execute in this node. If not specified, the closure executed will be the default one specified when creating the graph.
 	
-		:returns:	The graph itself, allowing for fluent interfaces
+		- returns:	The graph itself, allowing for fluent interfaces
 	*/
-	func addNodeWithIdentifier(identifier: NodeIdentifier, isConcurrent: Bool = true, operation: NodeOperation? = nil) -> AsyncGraph
-	{
-		if let duplicatedNode = self.nodes[identifier]
-		{
+	func addNodeWithIdentifier(identifier: NodeIdentifier, isConcurrent: Bool = true, operation: NodeOperation? = nil) -> AsyncGraph {
+		if let _ = self.nodes[identifier] {
 			NSLog("Not adding \(identifier) to the graph, as it already exists")
-		}
-		else
-		{
+		} else {
 			self.nodes[identifier] = AsyncGraphNodeDefinition(identifier: identifier, isConcurrent: isConcurrent, operation: operation)
 		}
 		
@@ -112,26 +105,24 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Adds a dependency between nodes. The node identified by identifier won't be processed until the node identified by to has finished processing
 	
-		:param:	identifier	Identifier of the dependant node
-		:param:	to	Identifier of the parent node
+		- parameter	identifier:	Identifier of the dependant node
+		- parameter	to:	Identifier of the parent node
 	
-		:returns:	The graph itself, allowing for fluent interfaces
+		- returns:	The graph itself, allowing for fluent interfaces
 	*/
-	func addDependencyFrom(identifier: NodeIdentifier, to: NodeIdentifier) -> AsyncGraph
-	{
+	func addDependencyFrom(identifier: NodeIdentifier, to: NodeIdentifier) -> AsyncGraph {
 		return addDependencyFrom(identifier, toNodes: [to])
 	}
 	
 	/**
 		Adds dependencies between nodes. The node identified by identifier won't be processed until all the nodes in toNodes have been processed
 		
-		:param:	identifier	Identifier of the dependant node
-		:param:	toNodes	Identifiers of the parent nodes
+		- parameter	identifier:	Identifier of the dependant node
+		- parameter	toNodes:	Identifiers of the parent nodes
 		
-		:returns:	The graph itself, allowing for fluent interfaces
+		- returns:	The graph itself, allowing for fluent interfaces
 	*/
-	func addDependencyFrom(identifier: NodeIdentifier, toNodes: [NodeIdentifier]) -> AsyncGraph
-	{
+	func addDependencyFrom(identifier: NodeIdentifier, toNodes: [NodeIdentifier]) -> AsyncGraph {
 		let parents = self.dependencies[identifier] ?? Set<NodeIdentifier>()
 		self.dependencies[identifier] = parents.union(toNodes)
 		
@@ -142,13 +133,12 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Get the result of a node
 		
-		:param:	identifier	Identifier of the node
+		- parameter	identifier:	Identifier of the node
 	
-		:returns:	If the node identified by identifier has been processed and has returned a value from its closure, this method will return that value.
+		- returns:	If the node identified by identifier has been processed and has returned a value from its closure, this method will return that value.
 					Otherwise it will return nil
 	*/
-	func resultFrom(identifier: NodeIdentifier) -> NodeResult?
-	{
+	func resultFrom(identifier: NodeIdentifier) -> NodeResult? {
 		return self.results[identifier]
 	}
 	
@@ -156,18 +146,16 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Process the graph synchronously. This call blocks the current thread until all nodes have been processed. Processing cannot be paused or cancelled
 	*/
-	func processSynchronous()
-	{
+	func processSynchronous() {
 		self.processAndWaitUntilFinished(true)
 	}
 	
 	/**
 		Start processing the graph and return immediately, so the current thread is not blocked. Processing can be paused and resumed.
 	
-		:returns:	The graph itself, allowing for fluent interfaces
+		- returns:	The graph itself, allowing for fluent interfaces
 	*/
-	func process() -> AsyncGraph
-	{
+	func process() -> AsyncGraph {
 		self.processAndWaitUntilFinished(false)
 		
 		return self
@@ -179,10 +167,8 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 		are issued even they are ready to be issued, but the operations that are being executed in this moment, will continue to execute unless
 		you check the graph status in your code and pause the operation accordingly.
 	*/
-	func pause()
-	{
-		if(self.status == .Processing)
-		{
+	func pause() {
+		if(self.status == .Processing) {
 			self.status = .Paused
 			
 			self.operationQueue?.suspended = true
@@ -192,10 +178,8 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Resume the processing. Nodes ready to execute will be issued to the NSOperationQueue
 	*/
-	func resume()
-	{
-		if(self.status == .Paused)
-		{
+	func resume() {
+		if(self.status == .Paused) {
 			self.status = .Processing
 			
 			self.operationQueue?.suspended = false
@@ -205,10 +189,8 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Cancel the processing.
 	*/
-	func cancel()
-	{
-		switch self.status
-		{
+	func cancel() {
+		switch self.status {
 		case .Processing: fallthrough
 		case .Paused:
 			self.operationQueue?.cancelAllOperations()
@@ -227,12 +209,11 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Add a hook that will be executed when the graph has finished processing. Useful in asynchronous processing
 	
-		:param:	hook	Closure that will be executed when the graph has finished processing
+		- parameter	hook:	Closure that will be executed when the graph has finished processing
 	
-		:returns:	The graph itself, allowing for fluent interfaces
+		- returns:	The graph itself, allowing for fluent interfaces
 	*/
-	func addHook(hook: GraphHook) -> AsyncGraph
-	{
+	func addHook(hook: GraphHook) -> AsyncGraph {
 		self.graphHooks.append(hook)
 		
 		return self
@@ -241,20 +222,16 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Add a hook that will be executed when the node identified by identifier is about to be executed
 		
-		:param:	identifier	Identifier of the node
-		:param:	hook	Closure that will be executed before the node is executed
+		- parameter	identifier:	Identifier of the node
+		- parameter	hook:	Closure that will be executed before the node is executed
 		
-		:returns:	The graph itself, allowing for fluent interfaces
+		- returns:	The graph itself, allowing for fluent interfaces
 	*/
-	func addHookBefore(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph
-	{
-		if var hooks = self.hooksBefore[identifier]
-		{
+	func addHookBefore(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph {
+		if var hooks = self.hooksBefore[identifier] {
 			hooks.append(hook)
 			self.hooksBefore[identifier] = hooks
-		}
-		else
-		{
+		} else {
 			self.hooksBefore[identifier] = [ hook ]
 		}
 		
@@ -264,20 +241,16 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 	/**
 		Add a hook that will be executed when the node identified by identifier has been executed
 		
-		:param:	identifier	Identifier of the node
-		:param:	hook	Closure that will be executed after the node is executed
+		- parameter	identifier:	Identifier of the node
+		- parameter	hook:	Closure that will be executed after the node is executed
 		
-		:returns:	The graph itself, allowing for fluent interfaces
+		- returns:	The graph itself, allowing for fluent interfaces
 	*/
-	func addHookAfter(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph
-	{
-		if var hooks = self.hooksAfter[identifier]
-		{
+	func addHookAfter(identifier: NodeIdentifier, hook: NodeHook) -> AsyncGraph {
+		if var hooks = self.hooksAfter[identifier] {
 			hooks.append(hook)
 			self.hooksAfter[identifier] = hooks
-		}
-		else
-		{
+		} else {
 			self.hooksAfter[identifier] = [ hook ]
 		}
 		
@@ -291,30 +264,24 @@ class AsyncGraph<NodeIdentifier: Hashable, NodeResult> {
 private extension AsyncGraph {
 	
 	// MARK: Concurrency
-	private func didStartProcessingNodeConcurrent(isConcurrent: Bool)
-	{
-		if isConcurrent		// concurrent access (reader)
-		{
+	private func didStartProcessingNodeConcurrent(isConcurrent: Bool) {
+		if isConcurrent {		// concurrent access (reader)
 			dispatch_sync(self.mutexQueue) {
 				dispatch_semaphore_wait(self.concurrentSemaphore, DISPATCH_TIME_FOREVER);
 				
 				dispatch_sync(self.concurrentQueue) {
 					++self.concurrentProcessCount;
-					if self.concurrentProcessCount == 1
-					{
+					if self.concurrentProcessCount == 1 {
 						dispatch_semaphore_wait(self.nonConcurrentSemaphore, DISPATCH_TIME_FOREVER);
 					}
 				}
 				
 				dispatch_semaphore_signal(self.concurrentSemaphore);
 			}
-		}
-		else				// non concurrent access (writer)
-		{
+		} else {				// non concurrent access (writer)
 			dispatch_sync(self.nonConcurrentQueue) {
 				++self.nonConcurrentProcessCount
-				if self.nonConcurrentProcessCount == 1
-				{
+				if self.nonConcurrentProcessCount == 1 {
 					dispatch_semaphore_wait(self.concurrentSemaphore, DISPATCH_TIME_FOREVER);
 				}
 			}
@@ -323,26 +290,20 @@ private extension AsyncGraph {
 		}
 	}
 	
-	private func didEndProcessingNodeConcurrent(isConcurrent: Bool)
-	{
-		if isConcurrent		// concurrent access (reader)
-		{
+	private func didEndProcessingNodeConcurrent(isConcurrent: Bool) {
+		if isConcurrent {		// concurrent access (reader)
 			dispatch_sync(self.concurrentQueue) {
 				--self.concurrentProcessCount
-				if self.concurrentProcessCount == 0
-				{
+				if self.concurrentProcessCount == 0 {
 					dispatch_semaphore_signal(self.nonConcurrentSemaphore)
 				}
 			}
-		}
-		else				// non concurrent access (writer)
-		{
+		} else {				// non concurrent access (writer)
 			dispatch_semaphore_signal(self.nonConcurrentSemaphore)
 			
 			dispatch_sync(self.nonConcurrentQueue) {
 				--self.nonConcurrentProcessCount;
-				if self.nonConcurrentProcessCount == 0
-				{
+				if self.nonConcurrentProcessCount == 0 {
 					dispatch_semaphore_signal(self.concurrentSemaphore)
 				}
 			}
@@ -350,12 +311,10 @@ private extension AsyncGraph {
 	}
 	
 	// MARK: Processing
-	private func operations() -> [ NSOperation ]
-	{
+	private func operations() -> [ NSOperation ] {
 		var operations = [ NodeIdentifier : NSOperation ]()
 		
-		for (identifier, node) in self.nodes
-		{
+		for (identifier, node) in self.nodes {
 			let operation = NSBlockOperation()
 			operation.addExecutionBlock() {
 				[unowned operation] in
@@ -373,40 +332,31 @@ private extension AsyncGraph {
 			operations[identifier] = operation
 		}
 		
-		for (identifier, dependencies) in self.dependencies
-		{
-			if let operation = operations[identifier]
-			{
-				for dependency in dependencies
-				{
-					if let dependency = operations[dependency]
-					{
+		for (identifier, dependencies) in self.dependencies {
+			if let operation = operations[identifier] {
+				for dependency in dependencies {
+					if let dependency = operations[dependency] {
 						operation.addDependency(dependency)
 					}
 				}
 			}
 		}
 		
-		return operations.values.array
+		return Array(operations.values)
 	}
 	
-	private func processAndWaitUntilFinished(waitUntilFinished: Bool)
-	{
-		if(self.status == .Initializing)
-		{
+	private func processAndWaitUntilFinished(waitUntilFinished: Bool) {
+		if(self.status == .Initializing) {
 			self.status = .Processing
 			
 			let operations = self.operations()
 			
-			if(waitUntilFinished)
-			{
+			if(waitUntilFinished) {
 				let operationQueue = NSOperationQueue()
 				operationQueue.addOperations(operations, waitUntilFinished: true)
 				
 				self.markAsProcessedAndFireHooks()
-			}
-			else
-			{
+			} else {
 				self.operationQueue = NSOperationQueue()
 				self.operationQueue?.addOperations(operations, waitUntilFinished: false)
 				
@@ -419,22 +369,17 @@ private extension AsyncGraph {
 		}
 	}
 	
-	private func markAsProcessedAndFireHooks()
-	{
+	private func markAsProcessedAndFireHooks() {
 		self.status = self.status == .Cancelled ? .Cancelled : .Processed
 		
-		for hook in self.graphHooks
-		{
+		for hook in self.graphHooks {
 			hook(self)
 		}
 	}
 	
-	private func fireHooks(hooks: [ NodeHook ]?, identifier: NodeIdentifier, operation: NSOperation, graph: AsyncGraph<NodeIdentifier, NodeResult>)
-	{
-		if let hooks = hooks
-		{
-			for hook in hooks
-			{
+	private func fireHooks(hooks: [ NodeHook ]?, identifier: NodeIdentifier, operation: NSOperation, graph: AsyncGraph<NodeIdentifier, NodeResult>) {
+		if let hooks = hooks {
+			for hook in hooks {
 				hook(identifier, operation, self)
 			}
 		}

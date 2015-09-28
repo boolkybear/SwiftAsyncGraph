@@ -162,7 +162,7 @@ class AsyncGraphDemoTests: XCTestCase {
 				return nil
 			}.processSynchronous()
 		
-		let resultString = join("#", result)
+		let resultString = result.joinWithSeparator("#")
 		XCTAssert(resultString == "3#5")
 	}
 	
@@ -190,7 +190,7 @@ class AsyncGraphDemoTests: XCTestCase {
 			}.addDependencyFrom("3", to: "5")
 			.processSynchronous()
 		
-		let resultWithDependenciesString = join("#", resultWithDependencies)
+		let resultWithDependenciesString = resultWithDependencies.joinWithSeparator("#")
 		XCTAssert(resultWithDependenciesString == "5#3")
 	}
 	
@@ -201,7 +201,7 @@ class AsyncGraphDemoTests: XCTestCase {
 		let graphWithDefault = AsyncGraph<String, Void> {
 			identifier, operation, graph in
 			
-			let timeInterval = NSTimeInterval(identifier.toInt() ?? 0)
+			let timeInterval = NSTimeInterval(Int(identifier) ?? 0)
 			
 			NSThread.sleepForTimeInterval(timeInterval)
 			
@@ -212,7 +212,7 @@ class AsyncGraphDemoTests: XCTestCase {
 			.addNodeWithIdentifier("3")
 			.processSynchronous()
 		
-		let resultDefaultString = join("#", resultDefault)
+		let resultDefaultString = resultDefault.joinWithSeparator("#")
 		XCTAssert(resultDefaultString == "3#5")
 	}
 	
